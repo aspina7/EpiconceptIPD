@@ -1,0 +1,42 @@
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+# data folder (maybe share this?)
+/data/
+# knitr and R markdown default cache directories
+/*_cache/
+/cache/
+# Temporary files created by R markdown
+*.utf8.md
+*.knit.md
+# latex stuff
+## Core latex/pdflatex auxiliary files:
+*.aux
+*.lof
+*.log
+#/**/*.log
+*.lot
+*.fls
+*.out
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+.*.lb
+## Build tool auxiliary files:
+*.fdb_latexmk
+*.synctex
+*.synctex(busy)
+*.synctex.gz
+*.synctex.gz(busy)
+*.pdfsync
+## Bibliography auxiliary files (bibtex/biblatex/biber):
+*.bbl
+*.bcf
+*.blg
+*-blx.aux
+*-blx.bib
+*.run.xml
+.Rproj.user
