@@ -2,31 +2,107 @@
 title: "EpiconceptIPD"
 author: "Investigation team"
 date: "04 Oktober 2018"
-output: word_document
+output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  oncordance = TRUE,
+  message = FALSE,
+  warning = FALSE
+  )
 ```
 
-## R Markdown
+```{r packages4knit, echo = FALSE}
+#load packages
+  #Those required for creating this markdown: 
+    #"Worded": for styling and pagebreaks (devtools::install_github("davidgohel/worded"))
+    #"knitr": for styling tables
+required_packages <- c("worded", "knitr") 
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+for (i in seq(along = required_packages)) {
+  library(required_packages[i], character.only = TRUE)
+}
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+# The dataset for time series will probably come mid-next week. It will be Scottish data with several years of pre-vaccination data (2000-2006), 3 years of PCV7 years (2007-2009) and 8 years of PCV13 years (2010-2017). 
 ```
 
-## Including Plots
+### Setting your working directory
 
-You can also embed plots, for example:
+You can check the path for your current working directory using the *getwd* function.
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r, eval = FALSE}
+# Check your current working directory
+getwd()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+To set your working directory you can use the *setwd* function. 
+
+```{r, eval = FALSE}
+setwd("C:/Users/Username/Desktop/EpiconceptIPD")
+```
+
+### Reading in files
+
+Import the dataset from a comma seperated file (.csv) using the *read.csv* function, storing it as a dataframe within *R* called *ipd_cases*. Further, import population data using the same approach (*population*). For a CSV file the separator is normally a comma (","), however depending on the language of your operating system this can also be other values, for example a semi-colon (";"). Here we also specify that we do not want to format strings as factors.
+
+```{r read_data}
+ipd_cases <- read.csv("data/ipd_cases.csv", sep = ",", stringsAsFactors = FALSE)
+population <- read.csv("data/ipd_population.csv", sep = ",", stringsAsFactors = FALSE )
+```
+
+Take a look at the data
+
+```{r}
+head(ipd_cases, n = 10)
+```
+
+
+Definition of vaccines (serotypes covered)
+
+```{r vaccine_definition}
+pcv7  <- c("4", "6B", "9V", "14", "18C", "19F", "23F")
+pcv10 <- c("4", "6B", "9V", "14", "18C", "19F", "23F", "1", "5", "7F") # might not be needed
+pcv13 <- c("4", "6B", "9V", "14", "18C", "19F", "23F", "1", "5", "7F", "3", "6A", "19A")
+pcv23 <- c("4", "6B", "9V", "14", "18C", "19F", "23F", "1", "5", "7F", "3",       "19A",  # might not be needed
+           "2", "8", "9N", "10A", "11A", "12F", "15B", "17F", "20", "33F",  "22F")
+```
+
+
+### Recoding/Fixing Data
+
+```{r}
+# decide if this should be taken out
+ipd_cases$Month[!ipd_cases$Month %in% 1:12] <- NA
+
+ipd_cases$Serotype <- gsub(pattern = "serotype ", replacement = "", x = ipd_cases$Serotype, fixed = TRUE)
+
+```
+
+### Basic statistics
+
+```{r}
+all_year <- addmargins(table(ipd_cases$Year, ipd_cases$AgeGroup), 2, FUN = list(Total = sum)) # find better name for df
+```
+
+```{r, echo = FALSE}
+kable(all_year)
+```
+
+```{r}
+ipd_cases$PCV7 <- ipd_cases$Serotype %in% pcv7
+ipd_cases$PCV13 <- ipd_cases$Serotype %in% pcv13
+
+pcv7_year <- addmargins(table(ipd_cases$Year[ipd_cases$PCV7], ipd_cases$AgeGroup[ipd_cases$PCV7]), 2, 
+                        FUN = list(Total = sum))
+pcv13_year <- addmargins(table(ipd_cases$Year[ipd_cases$PCV13], ipd_cases$AgeGroup[ipd_cases$PCV13]), 2, 
+                         FUN = list(Total = sum))
+
+plot(rownames(pcv13_year), pcv13_year[, 4], type = "l",
+     xlab = "Year", ylab = "Number of PCV13 cases")
+```
+
+
 
 
