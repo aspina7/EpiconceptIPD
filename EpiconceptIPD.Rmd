@@ -45,11 +45,11 @@ setwd("C:/Users/Username/Desktop/EpiconceptIPD")
 
 ### Reading in files
 
-Import the dataset from a comma seperated file (.csv) using the *read.csv* function, storing it as a dataframe within *R* called *ipd_cases*. Further, import population data using the same approach (*population*). For a CSV file the separator is normally a comma (","), however depending on the language of your operating system this can also be other values, for example a semi-colon (";"). Here we also specify that we do not want to format strings as factors.
+Import the dataset from a comma seperated file (.csv) using the *read.csv* function, storing it as a dataframe within *R* called *ipd_cases*. Further, import population data using the same approach (*population*). For a CSV file the separator is normally a comma (","), however depending on the language of your operating system this can also be other values, for example a semi-colon (";"). Here we also specify that we do not want to format strings as factors. When reading population data we additionally define the option *check.names = FALSE* which makes sure that variable names are kept as defined in the CSV. By default (*check.names = TRUE*) *R* would automatically change column names to follow certain rules (e.g. no numeric as first character).
 
 ```{r read_data}
 ipd_cases <- read.csv("data/ipd_cases.csv", sep = ",", stringsAsFactors = FALSE)
-population <- read.csv("data/ipd_population.csv", sep = ",", stringsAsFactors = FALSE )
+population <- read.csv("data/ipd_population.csv", sep = ",", stringsAsFactors = FALSE, check.names = FALSE)
 ```
 
 Take a look at the data
@@ -80,7 +80,7 @@ ipd_cases$Serotype <- gsub(pattern = "serotype ", replacement = "", x = ipd_case
 
 ```
 
-### Basic statistics
+### Basic statistics/analyses
 
 ```{r}
 all_year <- addmargins(table(ipd_cases$Year, ipd_cases$AgeGroup), 2, FUN = list(Total = sum)) # find better name for df
@@ -100,7 +100,10 @@ pcv13_year <- addmargins(table(ipd_cases$Year[ipd_cases$PCV13], ipd_cases$AgeGro
                          FUN = list(Total = sum))
 
 plot(rownames(pcv13_year), pcv13_year[, 4], type = "l",
-     xlab = "Year", ylab = "Number of PCV13 cases")
+     xlab = "Year", ylab = "Number of PCV13 cases",
+     ylim = c(0, 700))
+points(rownames(pcv13_year), pcv13_year[, 4])
+abline(v = c(2007, 2010) - 1, col = "red", lty = "dashed")
 ```
 
 
