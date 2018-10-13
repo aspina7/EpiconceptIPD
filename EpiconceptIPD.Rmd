@@ -30,14 +30,14 @@ for (i in seq(along = required_packages)) {
 
 ### Setting your working directory
 
-You can check the path for your current working directory using the *getwd* function.
+You can check the path for your current working directory using the `getwd` function.
 
 ```{r, eval = FALSE}
 # Check your current working directory
 getwd()
 ```
 
-To set your working directory you can use the *setwd* function. 
+To set your working directory you can use the `setwd` function. 
 
 ```{r, eval = FALSE}
 setwd("C:/Users/Username/Desktop/EpiconceptIPD")
@@ -45,14 +45,14 @@ setwd("C:/Users/Username/Desktop/EpiconceptIPD")
 
 ### Reading in files
 
-Import the dataset from a comma seperated file (.csv) using the *read.csv* function, storing it as a dataframe within *R* called *ipd_cases*. Further, import population data using the same approach (*population*). For a CSV file the separator is normally a comma (","), however depending on the language of your operating system this can also be other values, for example a semi-colon (";"). Here we also specify that we do not want to format strings as factors. When reading population data we additionally define the option *check.names = FALSE* which makes sure that variable names are kept as defined in the CSV. By default (*check.names = TRUE*) *R* would automatically change column names to follow certain rules (e.g. no numeric as first character).
+Import the dataset from a comma seperated file (.csv) using the `read.csv` function, storing it as a dataframe within *R* called *ipd_cases*. Further, import population data using the same approach (*population*). For a CSV file the separator is normally a comma (","), however depending on the language of your operating system this can also be other values, for example a semi-colon (";"). Here we also specify that we do not want to format strings as factors. When reading population data we additionally define the option `check.names = FALSE` which makes sure that variable names are kept as defined in the CSV. By default (`check.names = TRUE`) *R* would automatically change column names to follow certain rules (e.g. no numeric as first character).
 
 ```{r read_data}
 ipd_cases <- read.csv("data/ipd_cases.csv", sep = ",", stringsAsFactors = FALSE)
 population <- read.csv("data/ipd_population.csv", sep = ",", stringsAsFactors = FALSE, check.names = FALSE)
 ```
 
-Take a look at the data
+Take a look at the first 10 rows of the data.
 
 ```{r}
 head(ipd_cases, n = 10)
@@ -73,7 +73,7 @@ pcv23 <- c("4", "6B", "9V", "14", "18C", "19F", "23F", "1", "5", "7F", "3",     
 ### Recoding/Fixing Data
 
 ```{r}
-# decide if this should be taken out
+# decide if this should be taken out and a "clean" dataset should be available
 ipd_cases$Month[!ipd_cases$Month %in% 1:12] <- NA
 
 ipd_cases$Serotype <- gsub(pattern = "serotype ", replacement = "", x = ipd_cases$Serotype, fixed = TRUE)
@@ -82,29 +82,147 @@ ipd_cases$Serotype <- gsub(pattern = "serotype ", replacement = "", x = ipd_case
 
 ### Basic statistics/analyses
 
+Tabulate cases by year and age-group.
 ```{r}
 all_year <- addmargins(table(ipd_cases$Year, ipd_cases$AgeGroup), 2, FUN = list(Total = sum)) # find better name for df
+```
+
+```{r, eval = FALSE}
+all_year
 ```
 
 ```{r, echo = FALSE}
 kable(all_year)
 ```
 
+Define two columns in our data to indicate if the case corresponds to PCV7 and/or PCV13 serotypes, respectively. Values in these columns are either `TRUE` or `FALSE`.
 ```{r}
 ipd_cases$PCV7 <- ipd_cases$Serotype %in% pcv7
 ipd_cases$PCV13 <- ipd_cases$Serotype %in% pcv13
+```
 
-pcv7_year <- addmargins(table(ipd_cases$Year[ipd_cases$PCV7], ipd_cases$AgeGroup[ipd_cases$PCV7]), 2, 
-                        FUN = list(Total = sum))
-pcv13_year <- addmargins(table(ipd_cases$Year[ipd_cases$PCV13], ipd_cases$AgeGroup[ipd_cases$PCV13]), 2, 
-                         FUN = list(Total = sum))
+Create tables of PCV7 (*pcv7_year*) and PCV13 (*pcv13_year*) cases by year and age-group. Remember, PCV7 was introduced in 2007, and PCV13 in 2010.
+```{r}
+pcv7_year <- addmargins(table(ipd_cases$Year[ipd_cases$PCV7], ipd_cases$AgeGroup[ipd_cases$PCV7]), 
+                        margin = 2, FUN = list(Total = sum))
+pcv13_year <- addmargins(table(ipd_cases$Year[ipd_cases$PCV13], ipd_cases$AgeGroup[ipd_cases$PCV13]), 
+                         margin = 2, FUN = list(Total = sum))
+```
 
+
+Plot annual cases and highlight years with PCV7/13 introduction (red dashed vertical lines).
+PCv7:
+```{r}
+plot(rownames(pcv7_year), pcv7_year[, 4], type = "l",
+     xlab = "Year", ylab = "Number of cases",
+     main = "IPD cases of PCV7 serotypes, total population",
+     sub = "red dashed: PCV7 and PCV13 introduction, respectively",
+     ylim = c(0, 450))
+points(rownames(pcv7_year), pcv7_year[, 4])
+abline(v = c(2007, 2010), col = "red", lty = "dashed")
+```
+
+PCV13:
+```{r}
 plot(rownames(pcv13_year), pcv13_year[, 4], type = "l",
-     xlab = "Year", ylab = "Number of PCV13 cases",
+     xlab = "Year", ylab = "Number of cases",
+     main = "IPD cases of PCV13 serotypes, total population",
+     sub = "red dashed: PCV7 and PCV13 introduction, respectively",
      ylim = c(0, 700))
 points(rownames(pcv13_year), pcv13_year[, 4])
-abline(v = c(2007, 2010) - 1, col = "red", lty = "dashed")
+abline(v = c(2007, 2010), col = "red", lty = "dashed")
 ```
+
+### Segmented regression
+We will need the `glm.nb` function from the *MASS* package. If you did not yet install this package, do it with the following code.
+```{r, eval = FALSE}
+install.packages("MASS")
+```
+
+Now we load the *MASS* package.
+```{r}
+library(MASS)
+```
+
+
+*blah blah, some basic information about segmented regression of ITS*
+
+We will analyse annual incidence of PCV13 serotypes among the whole population (*total*).
+
+First we need to transform the table (*pcv13_year*) to a data.frame. We will do so by using the *R* function `as.data.frame.matrix`
+Check the class of *pcv13_year*:
+```{r}
+class(pcv13_year)
+```
+
+Transformation and add the year as column. Note, we make sure that the year column will be of the class numeric.
+```{r}
+pcv13_aggr <- as.data.frame.matrix(pcv13_year)
+pcv13_aggr$year <- as.numeric(rownames(pcv13_aggr))
+```
+
+
+
+Merge population and create a data frame with necessary columns only
+
+```{r}
+pcv13_df <- merge(pcv13_aggr, population, by = "year", all.x = TRUE, suffixes = c("", "_pop"))
+pcv13_df <- pcv13_df[, c("year", "Total", "Total_pop")]
+```
+
+Define columns we need for segmented regression (to be explained explicitely)
+
+```{r}
+intervention_year <- 2007
+
+pcv13_df$linear <- 1:nrow(pcv13_df)
+pcv13_df$const_vacc <- as.numeric(pcv13_df$year >= intervention_year)
+pcv13_df$lin_vacc <- pmax(0, pcv13_df$year - intervention_year + 1)
+
+pcv13_df$pop100 <- pcv13_df$Total_pop / 100000
+```
+
+
+*lots of copy/paste from here on. not finished yet*
+```{r}
+# model the data
+nb <- glm.nb(Total ~ linear + const_vacc + lin_vacc + offset(log(pop100)), data = pcv13_df)
+summary(nb)
+```
+
+
+```{r}
+###
+model_output <- cbind(summary(nb)$coef[, c(1,4)], confint(nb))
+colnames(model_output) <- paste0(c("Coef", "p-value", "lower CI", "upper CI"))
+```
+
+```{r}
+# model fit
+all_out <- pcv13_df
+all_out$pop100 <- 1
+pred <- predict(nb, all_out, type = "response")
+pred.ci <- predict(nb, all_out, type = "link", se.fit = TRUE)
+pred.ci <- within(pred.ci, {
+  inci <- exp(fit)
+  LL <- exp(fit - 1.96 * se.fit)
+  UL <- exp(fit + 1.96 * se.fit)
+})
+```
+
+Table with results:
+
+Figure:
+
+
+
+
+
+
+
+
+
+
 
 
 
