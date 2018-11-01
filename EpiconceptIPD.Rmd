@@ -28,7 +28,7 @@ for (i in seq(along = required_packages)) {
 # The dataset for time series will probably come mid-next week. It will be Scottish data with several years of pre-vaccination data (2000-2006), 3 years of PCV7 years (2007-2009) and 8 years of PCV13 years (2010-2017). 
 ```
 
-### Setting your working directory
+## Working directory
 
 You can check the path for your current working directory using the `getwd` function.
 
@@ -43,7 +43,7 @@ To set your working directory you can use the `setwd` function.
 setwd("C:/Users/Username/Desktop/EpiconceptIPD")
 ```
 
-### Reading in files
+## Reading in data
 
 Import the dataset from a comma seperated file (.csv) using the `read.csv` function, storing it as a dataframe within *R* called *ipd_cases*. Further, import population data using the same approach (*population*). For a CSV file the separator is normally a comma (","), however depending on the language of your operating system this can also be other values, for example some non-english speaking European countries use a semi-colon (";") as standard. Here we also specify that we do not want to format strings as factors. When reading population data we additionally define the option `check.names = FALSE` which makes sure that variable names are kept as defined in the CSV. By default (`check.names = TRUE`) *R* would automatically change column names to follow certain rules (e.g. no numeric as first character).
 
@@ -52,7 +52,17 @@ ipd_cases <- read.csv("data/ipd_cases.csv", sep = ",", stringsAsFactors = FALSE)
 population <- read.csv("data/ipd_population.csv", sep = ",", stringsAsFactors = FALSE, check.names = FALSE)
 ```
 
-Take a look at the first 10 rows of the data or browse the dataframe in the preview.
+### Define more variables that will be needed
+
+Let us now define two variables which represent the serotypes covered by PCV7 and PCV13. We will use those variables later to identify cases with either so-called PCV7 or PCV13 serotypes respectively. We will e.g. call a case a "PCV7 case" if the identified serotype is one of the PCV7 serotypes.
+```{r vaccine_definition}
+pcv7  <- c("4", "6B", "9V", "14", "18C", "19F", "23F")
+pcv13 <- c("4", "6B", "9V", "14", "18C", "19F", "23F", "1", "5", "7F", "3", "6A", "19A")
+```
+
+## Observe the data
+
+Take a look at the first 10 rows of the data or browse the dataframe in the RStudio preview.
 
 ```{r, eval = FALSE}
 head(ipd_cases, n = 10)
@@ -65,14 +75,30 @@ Remember that `View` needs to be written with a capital *V*.
 kable(head(ipd_cases, n = 10))
 ```
 
-Let us now define two variables which represent the serotypes covered by PCV7 and PCV13. We will use those variables later to identify cases with either so-called PCV7 or PCV13 serotypes respectively. We will e.g. call a case a "PCV7 case" if the identified serotype is one of the PCV7 serotypes.
-```{r vaccine_definition}
-pcv7  <- c("4", "6B", "9V", "14", "18C", "19F", "23F")
-pcv13 <- c("4", "6B", "9V", "14", "18C", "19F", "23F", "1", "5", "7F", "3", "6A", "19A")
+Another option is to use *R*'s `str` function to display the structure of an *R* object compactly.
+
+```{r}
+str(ipd_cases)
+```
+You get a short overview of the dimensions of the dataset (number of observations, number of variables) and additionally the class of each variable including the first couple of observations.
+
+It is often useful to inspect character and factor variables separately to get to know the used values and labels and find out about spelling mistakes and different styles. Use the `unique` function on each of the character variables to get a list of all unique values in each variable.
+
+```{r, eval = FALSE}
+unique(ipd_cases$Month)
+unique(ipd_cases$AgeGroup)
+unique(ipd_cases$Serotype)
 ```
 
+## Data cleaning, recoding and fixing data
 
-### Recoding/Fixing Data
+Clean and change the dataset as needed for further analyses.
+
+Necessary changes:
+
+- Make sure that the `ipd_cases$Month` only contains the values 1-12 (Jan-Dec).
+- Unify the spelling/style of `ipd_cases$Serotype`.
+- Define two columns in our data to indicate if the case corresponds to PCV7 and/or PCV13 serotypes, respectively.
 
 ```{r}
 # decide if this should be taken out and a "clean" dataset should be available
@@ -82,7 +108,13 @@ ipd_cases$Serotype <- gsub(pattern = "serotype ", replacement = "", x = ipd_case
 
 ```
 
-### Basic statistics/analyses
+Define two columns in our data to indicate if the case corresponds to PCV7 and/or PCV13 serotypes, respectively. Values in these columns are either `TRUE` or `FALSE`.
+```{r}
+ipd_cases$PCV7 <- ipd_cases$Serotype %in% pcv7
+ipd_cases$PCV13 <- ipd_cases$Serotype %in% pcv13
+```
+
+## Basic statistics/analyses
 
 Tabulate cases by year and age-group.
 ```{r}
@@ -95,12 +127,6 @@ View(all_year)
 
 ```{r, echo = FALSE}
 kable(all_year)
-```
-
-Define two columns in our data to indicate if the case corresponds to PCV7 and/or PCV13 serotypes, respectively. Values in these columns are either `TRUE` or `FALSE`.
-```{r}
-ipd_cases$PCV7 <- ipd_cases$Serotype %in% pcv7
-ipd_cases$PCV13 <- ipd_cases$Serotype %in% pcv13
 ```
 
 Create tables of PCV7 (*pcv7_year*) and PCV13 (*pcv13_year*) cases by year and age-group. Remember, PCV7 was introduced in 2007, and PCV13 in 2010.
@@ -138,7 +164,7 @@ points(rownames(pcv13_year), pcv13_year[, "Total"])
 abline(v = c(2007, 2010), col = "red", lty = "dashed")
 ```
 
-### Segmented regression
+## Segmented regression
 We will need the `glm.nb` function from the *MASS* package to perform negative binomial regression. Additionally we will use the `tidy` function from the *broom* package to create nice model outputs. If you did not yet install these packages, do so using the `install.packages` function.
 ```{r, eval = FALSE}
 install.packages("MASS")
@@ -152,13 +178,13 @@ library(broom)
 ```
 
 
-*blah blah, some basic information about segmented regression of ITS*
+*TODO: blah blah, some basic information about segmented regression of ITS*
 
-*Explain why we look at PCV13 IPD only and use PCV7 introduction as intervention (good to practice, easy enough, still big samplesize, 6 additional STs seem to not have that big of an impact, ...).*
+*TODO: Explain why we look at PCV13 IPD only and use PCV7 introduction as intervention (good to practice, easy enough, still big samplesize, 6 additional STs seem to not have that big of an impact, ...).*
 
 We will analyse annual incidence of PCV13 serotypes among the whole population (*total*).
 
-First we need to transform the table (*pcv13_year*) into a data.frame. We will do so by using the *R* function `as.data.frame.matrix`
+First, transform the table (*pcv13_year*) into a data.frame. Use the *R* function `as.data.frame.matrix` to do so.
 Check the class of *pcv13_year*:
 ```{r}
 class(pcv13_year)
@@ -176,7 +202,7 @@ pcv13_df <- merge(pcv13_aggr, population, by = "year", all.x = TRUE, suffixes = 
 pcv13_df <- pcv13_df[, c("year", "Total", "Total_pop")]
 ```
 
-Define parameters and columns needed for segmented regression (to be explained explicitely)
+Define parameters and columns needed for segmented regression (TODO: to be explained explicitely)
 
 ```{r}
 intervention_year <- 2007
@@ -188,7 +214,7 @@ pcv13_df$lin_vacc <- pmax(0, pcv13_df$year - intervention_year + 1)
 pcv13_df$pop100 <- pcv13_df$Total_pop / 100000
 ```
 
-Negative binomial segmented regression
+Segmented negative binomial regression
 ```{r}
 # negative binomial segmented regression
 nb <- glm.nb(Total ~ linear + const_vacc + lin_vacc + offset(log(pop100)), data = pcv13_df)
@@ -209,7 +235,7 @@ View(nb_tidy)
 kable(nb_tidy)
 ```
 
-Figure:
+### Plot the result
 
 Prepare the data.frame for plotting. Calculate model predictions of incidence and confidence intervals.
 ```{r}
