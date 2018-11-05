@@ -10,7 +10,9 @@ knitr::opts_chunk$set(
   echo = TRUE,
   oncordance = TRUE,
   message = FALSE,
-  warning = FALSE
+  warning = FALSE,
+  fig.width = 9,
+  fig.height = 6
   )
 ```
 
@@ -165,6 +167,9 @@ abline(v = c(2007, 2010), col = "red", lty = "dashed")
 ```
 
 ## Segmented regression
+
+We can use segmented regression to assess the impact of a certain intervention, such es the introduction of a vaccine programme. You can think of that the data is devided into two segments (or periods), before and after the intervention, and regression models are estimated for both time periods. To do so, you could of course also split the time series in those two segments and run regression models for each. However, the advantage of segmented regression is that estimates for both segments come from the same model and therefore it is easy to calculate the effect of the intervention (which can sloppy be defined as the difference of the two segments) and confidence intervals directly from the model.
+
 We will need the `glm.nb` function from the *MASS* package to perform negative binomial regression. Additionally we will use the `tidy` function from the *broom* package to create nice model outputs. If you did not yet install these packages, do so using the `install.packages` function.
 ```{r, eval = FALSE}
 install.packages("MASS")
@@ -177,11 +182,11 @@ library(MASS)
 library(broom)
 ```
 
-Negative binomial regression model:
+In gerneral, the negative binomial regression model can be written as
 
 $log(Y_t) = \beta_0 + \beta_1 * t + \beta_2 * \delta(t-t_0) + \beta_3 * (t - t_0)^+ + log(pop_t) + e_t$
 
-Here, $Y_t$ is the number of IPD cases observed in year $t$; $pop_t$ is the population size in 100,000 in year $t$, $t_0$ is the last year (year 7) of the pre-period (including the transition time if there is any), $\delta(x)$ is the indicator function (it is 0 if $x \le0$ and 1 if $x > 0$), $(x)^+$ is the cut off operator (it is $x$ if $x>0$ and 0 otherwise), and $e_t$ denotes the residual. This means, that $\beta_2 * \delta(t-t_0) + \beta_3 * (t - t_0)^+$ is the additional generalised linear part of the post-period, which is zero in the pre-period. The estimates of $\beta_2$ and $\beta_3$ will denote the effects of the intervention.
+Here, $Y_t$ is the number of IPD cases observed in year $t$; $pop_t$ is the population size in 100,000 in year $t$, $t_0$ is the last year (year 7) of the pre-period (including the transition time if there is any), $\delta(x)$ is the indicator function (it is 0 if $x\le 0$ and 1 if $x > 0$), $(x)^+$ is the cut off operator (it is $x$ if $x>0$ and 0 otherwise), and $e_t$ denotes the residual. This means, that $\beta_2 * \delta(t-t_0) + \beta_3 * (t - t_0)^+$ is the additional generalised linear part of the post-period, which is zero in the pre-period. The estimates of $\beta_2$ and $\beta_3$ will denote the effects of the intervention. Of course more periods and terms to control for seasonality can be added if needed.
 
 *TODO: Explain why we look at PCV13 IPD only and use PCV7 introduction as intervention (good to practice, easy enough, still big samplesize, 6 additional STs seem to not have that big of an impact, ...).*
 
@@ -205,19 +210,18 @@ pcv13_df <- merge(pcv13_aggr, population, by = "year", all.x = TRUE, suffixes = 
 pcv13_df <- pcv13_df[, c("year", "Total", "Total_pop")]
 ```
 
-Define parameters and columns needed for segmented regression (TODO: to be explained explicitely)
-
+Define parameters and columns needed for segmented regression.
 ```{r}
 intervention_year <- 2007
 
-pcv13_df$linear <- 1:nrow(pcv13_df)
-pcv13_df$const_vacc <- as.numeric(pcv13_df$year >= intervention_year)
-pcv13_df$lin_vacc <- pmax(0, pcv13_df$year - intervention_year + 1)
+pcv13_df$linear <- 1:nrow(pcv13_df) # corresponds to t in the formula
+pcv13_df$const_vacc <- as.numeric(pcv13_df$year >= intervention_year) # corresponds to delta(t-t0) in the formula
+pcv13_df$lin_vacc <- pmax(0, pcv13_df$year - intervention_year + 1) # corresponds to (t-t0)+ in the formula
 
 pcv13_df$pop100 <- pcv13_df$Total_pop / 100000
 ```
 
-Segmented negative binomial regression
+Segmented negative binomial regression with population per 100.000 as offset:
 ```{r}
 # negative binomial segmented regression
 nb <- glm.nb(Total ~ linear + const_vacc + lin_vacc + offset(log(pop100)), data = pcv13_df)
@@ -252,7 +256,7 @@ View(nb_tidy_exp)
 kable(nb_tidy_exp)
 ```
 
-The percentage change of the anual incidence can be computed using the formula
+The percentage change of the anual incidence by year can be computed using the formula
 $IC\% = 100 * (\exp(\hat{\beta}) - 1)$.
 
 Therefore, after the intervention, the anual incidence changed by `r paste0("$100 * (\\exp(", round(nb_tidy$estimate[4],3) , ") - 1) = ", round(100*(exp(nb_tidy$estimate[4])-1), 1), "\\%$")` controlled for the baseline trend.
@@ -300,7 +304,7 @@ lines(post$year, post$upperCI, type = "l", lty = "dashed")
 abline(v = c(2007), col = "red", lty = "dashed")
 ```
 
-*Explain how to calculate effects (see Wagner et al. 2002)*
+
 
 
 
