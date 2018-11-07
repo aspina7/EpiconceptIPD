@@ -56,7 +56,7 @@ population <- read.csv("data/ipd_population.csv", sep = ",", stringsAsFactors = 
 
 ### Define more variables that will be needed
 
-Let us now define two variables which represent the serotypes covered by PCV7 and PCV13. We will use those variables later to identify cases with either so-called PCV7 or PCV13 serotypes respectively. We will e.g. call a case a "PCV7 case" if the identified serotype is one of the PCV7 serotypes.
+The PCV7 covers IPD serotypes 4, 6B, 9V, 14, 18C, 19F and 23F, and PCV13 covers 4, 6B, 9V, 14, 18C, 19F, 23F, 1, 5, 7F, 3, 6A and 19A. Let us now define two variables which represent the serotypes covered by the two vaccines. We will use those variables later to identify cases with either PCV7 or PCV13 serotypes respectively. We will e.g. call a case a "PCV7 case" if the identified serotype is one of the PCV7 serotypes.
 ```{r vaccine_definition}
 pcv7  <- c("4", "6B", "9V", "14", "18C", "19F", "23F")
 pcv13 <- c("4", "6B", "9V", "14", "18C", "19F", "23F", "1", "5", "7F", "3", "6A", "19A")
@@ -84,7 +84,7 @@ str(ipd_cases)
 ```
 You get a short overview of the dimensions of the dataset (number of observations, number of variables) and additionally the class of each variable including the first couple of observations.
 
-It is often useful to inspect character and factor variables separately to get to know the used values and labels and find out about spelling mistakes and different styles. Use the `unique` function on each of the character variables to get a list of all unique values in each variable.
+It is often useful to inspect character and factor variables separately to get to know the used values and labels and find out about potential spelling mistakes and different styles. Use the `unique` function on each of the character variables to get a list of all unique values in each variable.
 
 ```{r, eval = FALSE}
 unique(ipd_cases$Month)
@@ -120,23 +120,23 @@ ipd_cases$PCV13 <- ipd_cases$Serotype %in% pcv13
 
 Tabulate cases by year and age-group.
 ```{r}
-all_year <- addmargins(table(ipd_cases$Year, ipd_cases$AgeGroup), 2, FUN = list(Total = sum)) # find better name for df
+annual_cases <- addmargins(table(ipd_cases$Year, ipd_cases$AgeGroup), 2, FUN = list(Total = sum))
 ```
 
 ```{r, eval = FALSE}
-View(all_year)
+View(annual_cases)
 ```
 
 ```{r, echo = FALSE}
-kable(all_year)
+kable(annual_cases)
 ```
 
-Create tables of PCV7 (*pcv7_year*) and PCV13 (*pcv13_year*) cases by year and age-group. Remember, PCV7 was introduced in 2007, and PCV13 in 2010.
+Create tables of PCV7 (*annual_pcv7*) and PCV13 (*annual_pcv13*) cases by year and age-group. Remember, PCV7 was introduced in 2007, and PCV13 in 2010.
 ```{r}
-pcv7_year <- addmargins(table(ipd_cases$Year[ipd_cases$PCV7], 
+annual_pcv7 <- addmargins(table(ipd_cases$Year[ipd_cases$PCV7], 
                               ipd_cases$AgeGroup[ipd_cases$PCV7]), 
                         margin = 2, FUN = list(Total = sum))
-pcv13_year <- addmargins(table(ipd_cases$Year[ipd_cases$PCV13], 
+annual_pcv13 <- addmargins(table(ipd_cases$Year[ipd_cases$PCV13], 
                                ipd_cases$AgeGroup[ipd_cases$PCV13]), 
                          margin = 2, FUN = list(Total = sum))
 ```
@@ -146,23 +146,23 @@ Plot annual cases and highlight years with PCV7/13 introduction (red dashed vert
 
 **PCV7:**
 ```{r}
-plot(rownames(pcv7_year), pcv7_year[, "Total"], type = "l",
+plot(rownames(annual_pcv7), annual_pcv7[, "Total"], type = "l",
      xlab = "Year", ylab = "Number of cases",
      main = "IPD cases of PCV7 serotypes, total population",
      sub = "red dashed: PCV7 and PCV13 introduction, respectively",
      ylim = c(0, 450))
-points(rownames(pcv7_year), pcv7_year[, "Total"])
+points(rownames(annual_pcv7), annual_pcv7[, "Total"])
 abline(v = c(2007, 2010), col = "red", lty = "dashed")
 ```
 
 **PCV13:**
 ```{r}
-plot(rownames(pcv13_year), pcv13_year[, "Total"], type = "l",
+plot(rownames(annual_pcv13), annual_pcv13[, "Total"], type = "l",
      xlab = "Year", ylab = "Number of cases",
      main = "IPD cases of PCV13 serotypes, total population",
      sub = "red dashed: PCV7 and PCV13 introduction, respectively",
      ylim = c(0, 700))
-points(rownames(pcv13_year), pcv13_year[, "Total"])
+points(rownames(annual_pcv13), annual_pcv13[, "Total"])
 abline(v = c(2007, 2010), col = "red", lty = "dashed")
 ```
 
@@ -188,19 +188,17 @@ $log(Y_t) = \beta_0 + \beta_1 * t + \beta_2 * \delta(t-t_0) + \beta_3 * (t - t_0
 
 Here, $Y_t$ is the number of IPD cases observed in year $t$; $pop_t$ is the population size in 100,000 in year $t$, $t_0$ is the last year (year 7) of the pre-period (including the transition time if there is any), $\delta(x)$ is the indicator function (it is 0 if $x\le 0$ and 1 if $x > 0$), $(x)^+$ is the cut off operator (it is $x$ if $x>0$ and 0 otherwise), and $e_t$ denotes the residual. This means, that $\beta_2 * \delta(t-t_0) + \beta_3 * (t - t_0)^+$ is the additional generalised linear part of the post-period, which is zero in the pre-period. The estimates of $\beta_2$ and $\beta_3$ will denote the effects of the intervention. Of course more periods and terms to control for seasonality can be added if needed.
 
-*TODO: Explain why we look at PCV13 IPD only and use PCV7 introduction as intervention (good to practice, easy enough, still big samplesize, 6 additional STs seem to not have that big of an impact, ...).*
+In the following we will analyse annual incidence of PCV13 serotypes among the whole population (*total*). As PCV7 serotypes are also covered by PCV13 and we already see an impact on PCV13 serotypes we consider 2007 as time of intervention. Analoguously sub-populations and other intervention definitions can be analysed. To get (to some extent) robust results a certain amount of time points per period and a certain amount of observations per time point should be available. It is desirable to have 12 time points per period (not fulfilled in our example) and  100 observations (cases) per each time point. However, those numbers are rough suggestions and do not rely on power estimates.
 
-We will analyse annual incidence of PCV13 serotypes among the whole population (*total*).
-
-First, transform the table (*pcv13_year*) into a data.frame. Use the *R* function `as.data.frame.matrix` to do so.
-Check the class of *pcv13_year*:
+First, transform the table (*annual_pcv13*) into a data.frame. Use the *R* function `as.data.frame.matrix` to do so.
+Check the class of *annual_pcv13*:
 ```{r}
-class(pcv13_year)
+class(annual_pcv13)
 ```
 
 In our case, the year is stored as row name and not as a column itself. Therefore transform the data into a data.frame as explained above and add the year as seperate column. Make sure that the year column is of class numeric.
 ```{r}
-pcv13_aggr <- as.data.frame.matrix(pcv13_year)
+pcv13_aggr <- as.data.frame.matrix(annual_pcv13)
 pcv13_aggr$year <- as.numeric(rownames(pcv13_aggr))
 ```
 
